@@ -1,0 +1,9 @@
+[{
+	"cmd": "IDLE",
+	"desc": "some number of seconds",
+	"dummy": {
+		"cmd_path": "scripts/sleep.py",
+		"time": "0",
+		"respond": "1"
+	}
+}]
