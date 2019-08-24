@@ -11,8 +11,6 @@ Full license and documentation to be found at:
 https://github.com/ZAdamMac/Enumpi-C2
 """
 
-import json
-
 
 def json_validate(test_json, dict_schema):
     """A simplistic JSON validator for pre-clearing missing or incorrectly-
