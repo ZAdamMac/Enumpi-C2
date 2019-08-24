@@ -66,8 +66,8 @@ class AuthenticateUser(Resource):
         uid = dict_user["user_id"]
         aud = "user"
         token, expiry = build_auth_token(ttl, key, uid, issuer, aud)
-        cmd = "UPDATE users SET bearer_token_key=%s, bearer_token_expiry=%s WHERE user_id=%s"
-        cur.execute(cmd, (key, expiry, uid))
+        cmd = "UPDATE users SET bearer_token_key=%s, bearer_token_expiry=FROM_UNIXTIME(%s) WHERE user_id=%s"
+        cur.execute(cmd, (key, int(expiry), uid))
         connection.commit()
         connection.close()
         resp = make_response(render_template("home.html"))  # Kick these kids back out to home.
