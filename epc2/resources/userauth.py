@@ -23,11 +23,13 @@ from .utilties import build_auth_token, json_validate
 
 class AuthenticateUser(Resource):
     def get(self):
-        return render_template("web/login.html", netlabel=current_app.config["NETWORK_LABEL"])
+        resp = make_response(render_template('login.html', netlabel=current_app.config["NETWORK_LABEL"]))
+        resp.headers["Content-Type"] = 'text/html'
+        return resp
 
     def post(self):
         #   Authenticate the provided credentials, respond with cookie and redirect to home.
-        json_data = request.get_json(force=True)
+        json_data = request.form.to_dict()
         dict_schema = {
             "uid": "",
             "password": ""
@@ -54,7 +56,7 @@ class AuthenticateUser(Resource):
         cur.execute("SELECT * FROM users WHERE username=%s", username)
         dict_user = cur.fetchone()
 
-        pwd = json_data["password"].encode('utf9')
+        pwd = json_data["password"].encode('utf-8')
         if not bcrypt.checkpw(pwd, dict_user["passwd"]):
             return {'error': "Unauthorized"}, 403
 
@@ -68,6 +70,6 @@ class AuthenticateUser(Resource):
         cur.execute(cmd, (key, expiry, uid))
         connection.commit()
         connection.close()
-        resp = make_response(redirect('/home'))  # Kick these kids back out to home.
+        resp = make_response(render_template("home.html"))  # Kick these kids back out to home.
         resp.set_cookie('auth', token)  # Give them their token though.
         return resp

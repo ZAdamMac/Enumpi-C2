@@ -12,7 +12,7 @@ https://github.com/ZAdamMac/Enumpi-C2
 
 from flask import Blueprint
 from flask_restful import Api
-from .resources.userauth import AuthenticateUser
+from resources.userauth import AuthenticateUser
 
 __version__ = "prototype"
 

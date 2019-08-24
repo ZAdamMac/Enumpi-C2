@@ -5,12 +5,13 @@
     <title>Login - {{netlabel}}</title>
 </head>
 <body>
-<form action='/user/auth' enctype="application/json" method="post">
+<form id="json" enctype="application/json" method="post" action="/api/user/auth">
   Username:<br>
   <input type="text" name="uid"><br>
   Password:<br>
   <input type="password" name="password"><br>
     <input type="submit" value="Login">
 </form>
+
 </body>
 </html>

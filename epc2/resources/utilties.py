@@ -85,7 +85,7 @@ def json_validate(test_json, dict_schema):
         if len(list_response) == 0:
             return True, list_response
         else:
-            dict_response: {}
+            dict_response = {}
             for error in list_response:
                 dict_response.update(error)
             return False, dict_response
