@@ -12,7 +12,7 @@ https://github.com/ZAdamMac/Enumpi-C2
 
 from flask import Blueprint
 from flask_restful import Api
-from resources.helloworld import Hello
+from .resources.userauth import AuthenticateUser
 
 __version__ = "prototype"
 
@@ -21,4 +21,4 @@ api_bp = Blueprint('api', __name__)
 api = Api(api_bp)
 
 # New Routes below this line
-api.add_resource(Hello, '/Hello')
+api.add_resource(AuthenticateUser, '/Users/Auth')
