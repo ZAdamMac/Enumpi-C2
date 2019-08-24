@@ -14,7 +14,7 @@ https://github.com/ZAdamMac/Enumpi-C2
 import bcrypt
 from datetime import datetime
 from flask_restful import Resource
-from flask import current_app, request, make_response, redirect
+from flask import current_app, request, make_response, redirect, render_template
 import json
 from os import urandom
 import pymysql
@@ -23,8 +23,7 @@ from .utilties import build_auth_token, json_validate
 
 class AuthenticateUser(Resource):
     def get(self):
-        #  Render a Login Page
-        pass
+        return render_template("web/login.html")
 
     def post(self):
         #   Authenticate the provided credentials, respond with cookie and redirect to home.
