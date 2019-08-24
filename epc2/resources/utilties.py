@@ -11,6 +11,45 @@ Full license and documentation to be found at:
 https://github.com/ZAdamMac/Enumpi-C2
 """
 
+import base64
+import datetime
+import hashlib
+import hmac
+import json
+
+
+def build_auth_token(ttl, key, uuid, iss, aud):
+    """Minimal tool for quickly generating a JWT and returning it along with
+    the associated expiry timestamp. Built as a utility function so that it
+    can be reused in all associated token operations. Signs tokens with HMAC
+    SHA256.
+
+    :param ttl: int minutes until expiry
+    :param key: bytes random key used in the signing operation.
+    :param uuid: UUID argued in as subject. Should be the associated user or
+    client id.
+    :param iss: Argued to issuer - defined in config.
+    :param aud: One of "client" or "user".
+    :return:
+    """
+    expiry = (datetime.datetime.now() + datetime.timedelta(minutes=ttl)).timestamp()
+    header = {
+        "alg": "HS256",
+        "type": "JWT"
+    }
+    body = {
+        "iss": iss,
+        "sub": uuid,
+        "aud": aud,
+        "exp": expiry
+    }
+    msg_a = base64.b64encode(json.dumps(header).encode('utf-8')).decode('utf-8')
+    msg_b = base64.b64encode(json.dumps(body).encode('utf-8')).decode('utf-8')
+    msg = msg_a + "." + msg_b
+    sig = hmac.new(key, msg.encode('utf-8'), digestmod=hashlib.sha256).hexdigest().upper()
+    token = msg+"."+sig
+    return token, expiry
+
 
 def json_validate(test_json, dict_schema):
     """A simplistic JSON validator for pre-clearing missing or incorrectly-
