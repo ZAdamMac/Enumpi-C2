@@ -14,6 +14,7 @@ https://github.com/ZAdamMac/Enumpi-C2
 
 from flask import Flask
 from configparser import ConfigParser
+from os import environ
 
 __version__ = "prototype"
 
@@ -57,6 +58,8 @@ def parse_config(path):
 
     for key in vars_config:
         setattr(conf, str(key).upper(), vars_config[key])
+    setattr(conf, "USERNAME", environ["ENUMPI_DB_USER"])
+    setattr(conf, "PASSPHRASE", environ["ENUMPI_DB_PASSWORD"])
 
     return conf
 
