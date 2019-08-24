@@ -59,7 +59,7 @@ class AuthenticateUser(Resource):
         if not bcrypt.checkpw(pwd, dict_user["passwd"]):
             return {'error': "Unauthorized"}, 403
 
-        ttl = int(current_app.config["USER_TTL"])
+        ttl = int(current_app.config["USER_TTL"])*60
         key = urandom(64)  # HMAC SHA256 uses 64-byte keys
         issuer = current_app.config["NETWORK_LABEL"]
         uid = dict_user["user_id"]
