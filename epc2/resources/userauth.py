@@ -23,7 +23,7 @@ from .utilties import build_auth_token, json_validate
 
 class AuthenticateUser(Resource):
     def get(self):
-        return render_template("web/login.html")
+        return render_template("web/login.html", netlabel=current_app.config["NETWORK_LABEL"])
 
     def post(self):
         #   Authenticate the provided credentials, respond with cookie and redirect to home.

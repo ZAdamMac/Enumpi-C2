@@ -21,4 +21,4 @@ api_bp = Blueprint('api', __name__)
 api = Api(api_bp)
 
 # New Routes below this line
-api.add_resource(AuthenticateUser, '/Users/Auth')
+api.add_resource(AuthenticateUser, '/user/auth')
