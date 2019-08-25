@@ -143,6 +143,8 @@ def token_validate(cookie, ttl, db_conn, new_key, iss, aud, t_type):
             sig_valid = True
         else:
             sig_valid = False
+    else:
+        sig_valid = False
 
     if time_valid and sig_valid:
         new_token, new_expiry = build_auth_token(ttl=ttl, key=new_key, uuid=uid, iss=iss, aud=aud)
