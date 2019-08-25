@@ -89,3 +89,69 @@ def json_validate(test_json, dict_schema):
             for error in list_response:
                 dict_response.update(error)
             return False, dict_response
+
+
+def token_validate(cookie, ttl, db_conn, new_key, iss, aud, t_type):
+    """Sort of a malnamed function. Both validates the argued token and
+    returns a tuple depending on the results. If the token is invalid it
+    returns the tuple (False, None), else it will return (True, new token).
+
+    :param cookie: A cookie provided by the calling endpoint.
+    :param ttl: The relevant time to live value. The bearer token will be
+    re-issued with an extended time based on this time to live.
+    :param db_conn: A database connection, assumed to have default DictCursor
+    :param new_key: A bytestring value, should be os.urandom(64)
+    :param iss: The network label value from global app config.
+    :param aud: The audience value, either "user" or "client"
+    :param t_type: String, one of "bearer" or "refresh", determining which is
+    checked by the application.
+    :return:
+    """
+    # First, dismantle the cookie and reconstruct our primitives
+    header, body, sig = cookie.split(".")
+    dict_header = base64.b64decode(header.encode('utf-8'))
+    dict_body = base64.b64decode(header.encode('utf-8'))
+    obj_header = json.loads(dict_header)
+    obj_body = json.loads(dict_body)
+    msg = header + "." + body
+
+    # Now, retrieve the relevant user from the db as a dictionary.
+    # This is possible because we're defaulting to DictCursor for this project.
+    curr = db_conn.cursor()
+    if aud == "user":
+        cmd = "SELECT * FROM users WHERE user_id=%s"
+    else:
+        cmd = "SELECT * FROM clients WHERE client_id=%s"
+    uid = obj_body["sub"]
+    length = curr.execute(cmd, uid)
+    if length == 0:
+        return False, None  # Should never happen, but might with a forged JWT
+    dict_user = curr.fetchone()  # user_id is a unique value, will never be more than 1
+
+    # Technically we could trust the expiry in the token, but I ain't about that life.
+    exp_current = dict_user[("%s_token_expiry" % t_type)]
+    if datetime.datetime.now() < exp_current:  # Token is not expired
+        time_valid = True
+    else:
+        time_valid = False
+
+    # Now we need to determine if the key is valid.
+    if time_valid:
+        key = dict_user[("%s_token_key" % t_type)]
+        sig_expected = hmac.new(key, msg.encode('utf-8'), digestmod=hashlib.sha256).hexdigest().upper()
+        if sig == sig_expected:
+            sig_valid = True
+        else:
+            sig_valid = False
+
+    if time_valid and sig_valid:
+        new_token, new_expiry = build_auth_token(ttl=ttl, key=new_key, uuid=uid, iss=iss, aud=aud)
+        if aud == "user":
+            cmd = "UPDATE users SET %s_token_key=%s, %s_token_expiry=FROM_UNIXTIME(%s) WHERE user_id=%s"
+        elif aud == "client"
+            cmd = "UPDATE users SET %s_token_key=%s, %s_token_expiry=FROM_UNIXTIME(%s) WHERE client_id=%s"
+        curr.execute(cmd, (t_type, new_key, t_type, new_expiry, uid))
+        db_conn.commit()
+        return True, new_token
+    else:
+        return False, None
