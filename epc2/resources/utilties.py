@@ -149,10 +149,10 @@ def token_validate(cookie, ttl, db_conn, new_key, iss, aud, t_type):
     if time_valid and sig_valid:
         new_token, new_expiry = build_auth_token(ttl=ttl, key=new_key, uuid=uid, iss=iss, aud=aud)
         if aud == "user":
-            cmd = "UPDATE users SET %s_token_key=%s, %s_token_expiry=FROM_UNIXTIME(%s) WHERE user_id=%s"
+            cmd = "UPDATE users SET bearer_token_key=%s, bearer_token_expiry=FROM_UNIXTIME(%s) WHERE user_id=%s"
         elif aud == "client":
-            cmd = "UPDATE users SET %s_token_key=%s, %s_token_expiry=FROM_UNIXTIME(%s) WHERE client_id=%s"
-        curr.execute(cmd, (t_type, new_key, t_type, new_expiry, uid))
+            cmd = "UPDATE users SET bearer_token_key=%s, bearer_token_expiry=FROM_UNIXTIME(%s) WHERE client_id=%s"
+        curr.execute(cmd, (new_key, new_expiry, uid))
         db_conn.commit()
         return True, new_token
     else:
