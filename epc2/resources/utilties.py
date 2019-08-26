@@ -78,9 +78,9 @@ class UserModel(object):
         self.can_grant = bool(int(s_permissions[3]))
         self.can_users = bool(int(s_permissions[4]))
 
-    def dump_json(self):
+    def dump_json(self, serialize=True):
         """Takes the current state of the user object and returns it in a
-        spec-compliant, serialized JSON object.
+        spec-compliant, serialized JSON object unless overridden.
         """
         d_json = {
             "userId": self.uid,
@@ -96,7 +96,11 @@ class UserModel(object):
                 "isUserAdmin": self.can_users
             }
         }
-        return json.dumps(d_json)
+        if serialize:
+            out = json.dumps(d_json)
+        else:
+            out = d_json
+        return out
 
     def dump_dict(self):
         """Return current state of the object as a dictionary suitable for use
