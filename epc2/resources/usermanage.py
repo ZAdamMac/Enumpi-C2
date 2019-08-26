@@ -173,7 +173,111 @@ class ManageUser(Resource):
 
     def patch(self):
         # edit an existing user, if authenticated.
-        pass
+        cookie = request.cookies["auth"]
+        ttl = int(current_app.config["USER_TTL"]) * 60
+        iss = current_app.config["NETWORK_LABEL"]
+        try:
+            connection = pymysql.connect(host=current_app.config["DBHOST"],
+                                         user=current_app.config["USERNAME"],
+                                         password=current_app.config["PASSPHRASE"],
+                                         db='enumpi',
+                                         charset='utf8mb4',
+                                         cursorclass=pymysql.cursors.DictCursor)
+            connection.ping(reconnect=True)
+        except KeyError:
+            return {'message': 'Internal Server Error'}, 500
+        except pymysql.Error:
+            return {'message': 'Internal Server Error'}, 500
+        token_user, new_token = token_validate(cookie, ttl, connection,
+                                               urandom(64), iss, "user",
+                                               "bearer")
+        if token_user:
+            # First we need to know who's asking.
+            cur = connection.cursor()
+            requestor = UserModel()
+            cmd = "SELECT * FROM users WHERE user_id=%s"
+            cur.execute(cmd, token_user)
+            d_user = cur.fetchone()
+            requestor.from_dict(d_user)
+
+            # And of course, if they're allowed to do that.
+            if requestor.can_users:
+                # We can't just validate the damn thing because patch.
+                # The only required field is UUID. We need to validate that exists.
+                # After that, we need a way to programmatically add keys.
+                d_json = request.get_json()
+                if d_json:
+                    if "userId" not in d_json.keys():
+                        subject_user = False
+                    else:
+                        dict_mapping = {
+                            "userId": "uid", "username": "name", "firstName": "fname",
+                            "lastName": "lname", "email": "email", "newPwd": "new_password",
+                            "forceResetPwd": "force_reset"
+                        }
+                        cur.execute(cmd, d_json["userId"])
+                        subject_user = False
+                        d_subject = cur.fetchone()
+                        if len(d_subject) > 0:  # We found a user with that ID
+                            subject_user = UserModel()
+                            subject_user.from_dict(d_subject)
+                            # We can update the user model programmatically with __setattr__
+                            for field in d_json.keys():  # Easier than nesting Try.
+                                if field in dict_mapping.keys():  # Only care about those.
+                                    # We can change these attributes programmatically!
+                                    # In retrospect this would have been a better way to handle
+                                    # UserModel's "from" methods in the first place.
+                                    # Possible point for the future.
+                                    subject_user.__setattr__(dict_mapping[field], d_json[field])
+                            if "permissions" in d_json.keys():
+                                # Permissions are a dictionary, we can assign them the same
+                                # way as above.
+                                dict_mapping = {
+                                    'active': "can_login",
+                                    "useReportingApi": "can_report",
+                                    "canIssueCommands": "can_command",
+                                    "canModifyClients": "can_grant",
+                                    "isUserAdmin": "can_users"
+                                }
+                                permissions = d_json["permissions"]
+                                for each in permissions.keys():
+                                    subject_user.__setattr__(dict_mapping[each],
+                                                             permissions[each])
+                else:
+                    subject_user = False
+
+                if subject_user:  # This will only be set if a user was found.
+                    # Let's add this user to the DB!
+                    d_user = subject_user.dump_dict()
+                    if d_user["passwd"]:  # May not be changing the password.
+                        cmd = """UPDATE users 
+                            SET username=%(username)s, fname=%(fname)s, lname=%(lname)s,
+                            email=%(email)s, passwd=%(passwd)s, pw_reset=%(pw_reset)s,
+                            access=%(access)s
+                            WHERE user_id=%(user_id)s"""
+                    else:  # In which case, just remove the password.
+                        cmd = """UPDATE users 
+                            SET username=%(username)s, fname=%(fname)s, lname=%(lname)s,
+                            email=%(email)s, pw_reset=%(pw_reset)s, access=%(access)s
+                            WHERE user_id=%(user_id)s"""
+                    cur.execute(cmd, d_user)
+                    connection.commit()
+                    connection.close()
+                    resp = make_response({'updated user': d_user})
+                    resp.set_cookie("auth", new_token)
+                    resp.status_code = 200
+                    resp.content_type = "application/json"
+                else:
+                    resp = make_response({'message': "user doesn't exist. Try POSTing it!"})
+                    resp.status_code = 400
+                    resp.set_cookie("auth", new_token)
+            else:
+                resp = make_response({'message': 'Insufficient Permissions'})
+                resp.status_code = 403
+                resp.set_cookie("auth", new_token)
+            return resp
+        else:
+            return {'message': 'unauthorized'}, 403
 
     def delete(self):
         # deactivate (set permissions 0) a user if authenticated.
