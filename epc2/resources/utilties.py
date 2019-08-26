@@ -26,6 +26,7 @@ class UserModel(object):
         self.name = None
         self.fname = None
         self.lname = None
+        self.email = None
         self.new_password = None
         self.force_reset = None
         self.can_login = None
@@ -42,11 +43,12 @@ class UserModel(object):
 
         :param s_json: the string of serialized json to be used.
         """
-        d_json = json.loads(s_json)
+        d_json = s_json
         self.uid = d_json["userId"]
         self.name = d_json["username"]
         self.fname = d_json["firstName"]
         self.lname = d_json["lastName"]
+        self.email = d_json["email"]
         self.new_password = d_json["newPwd"]
         self.force_reset = bool(d_json["forceResetPwd"])
         permissions = d_json["permissions"]
@@ -69,6 +71,7 @@ class UserModel(object):
         self.name = d_user["username"]
         self.fname = d_user["fname"]
         self.lname = d_user["lname"]
+        self.email = d_user["email"]
         self.force_reset = d_user["pw_reset"]
         self.last_active = d_user["bearer_token_expiry"]
         s_permissions = bin(d_user["access"]).lstrip('0b')
@@ -87,6 +90,7 @@ class UserModel(object):
             "username": self.name,
             "firstName": self.fname,
             "lastName": self.lname,
+            "email": self.email,
             "forceResetPwd": bool(self.force_reset),
             "permissions": {
                 "active": self.can_login,
@@ -121,6 +125,7 @@ class UserModel(object):
 
         d_user = {
             "user_id": self.uid,
+            "email": self.email,
             "username": self.name,
             "fname": self.fname,
             "lname": self.lname,
