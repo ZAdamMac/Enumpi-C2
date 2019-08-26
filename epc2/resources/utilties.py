@@ -12,10 +12,118 @@ https://github.com/ZAdamMac/Enumpi-C2
 """
 
 import base64
+import bcrypt
 import datetime
 import hashlib
 import hmac
 import json
+
+
+class UserModel(object):
+    def __init__(self):
+        """For sanity reasons, always init a blank user."""
+        self.uid = None
+        self.name = None
+        self.fname = None
+        self.lname = None
+        self.new_password = None
+        self.force_reset = None
+        self.can_login = None
+        self.can_report = None
+        self.can_command = None
+        self.can_grant = None
+        self.can_users = None
+        self.last_active = None
+
+    def from_json(self, s_json):
+        """Initializes a user object from JSON, such as would be supplied by
+        the create and modify user utilities. Do not use without validating
+        the json string with json_validate and the appropriate dictionary.
+
+        :param s_json: the string of serialized json to be used.
+        """
+        d_json = json.loads(s_json)
+        self.uid = d_json["userId"]
+        self.name = d_json["username"]
+        self.fname = d_json["firstName"]
+        self.lname = d_json["lastName"]
+        self.new_password = d_json["newPwd"]
+        self.force_reset = d_json["forceResetPwd"]
+        permissions = d_json["permissions"]
+        self.can_login = permissions["active"]
+        self.can_report = permissions["useReportingApi"]
+        self.can_command = permissions["canIssueCommands"]
+        self.can_grant = permissions["canModifyClients"]
+        self.can_users = permissions["isUserAdmin"]
+
+    def from_dict(self, d_user):
+        """Initialize using a dictionary of the sort returned by pymysql's
+        DictCursor cursor class. Expects the actual dictionary of a single
+        row. Use fetchone() iteratively or fetchall then iterate over the
+        return.
+
+        :param d_user: a dictionary.
+        :return:
+        """
+        self.uid = d_user["user_id"]
+        self.name = d_user["username"]
+        self.fname = d_user["fname"]
+        self.lname = d_user["lname"]
+        self.force_reset = d_user["pw_reset"]
+        self.last_active = d_user["bearer_token_expiry"]
+        s_permissions = bin(d_user["access"]).lstrip('0b')
+        self.can_login = bool(int(s_permissions[0]))
+        self.can_report = bool(int(s_permissions[1]))
+        self.can_command = bool(int(s_permissions[2]))
+        self.can_grant = bool(int(s_permissions[3]))
+        self.can_users = bool(int(s_permissions[4]))
+
+    def dump_json(self):
+        """Takes the current state of the user object and returns it in a
+        spec-compliant, serialized JSON object.
+        """
+        d_json = {
+            "userId": self.uid,
+            "username": self.name,
+            "firstName": self.fname,
+            "lastName": self.lname,
+            "forceResetPwd": self.force_reset,
+            "permissions": {
+                "active": self.can_login,
+                "useReportingApi": self.can_report,
+                "canIssueCommands": self.can_command,
+                "canModifyClients": self.can_grant,
+                "isUserAdmin": self.can_users
+            }
+        }
+        return json.dumps(d_json)
+
+    def dump_dict(self):
+        """Return current state of the object as a dictionary suitable for use
+        with the database. Collapses permissions back into an integer and pre-
+        salted-hashes the new password value, if any."""
+        if self.new_password:
+            salty_pass = bcrypt.hashpw(self.new_password.encode("utf-8"), bcrypt.gensalt())
+        else:
+            salty_pass = None
+
+        str_access = ''  # We need to turn this back to an int.
+        permissions = [self.can_login, self.can_report, self.can_command,
+                       self.can_grant, self.can_users]  # Lists are reliably ordered.
+        for each in permissions:
+            str_access += str(int(each))
+        int_access = int(str_access, 2)
+
+        d_user = {
+            "user_id": self.uid,
+            "username": self.name,
+            "fname": self.fname,
+            "lname": self.lname,
+            "passwd": salty_pass,
+            "pw_reset": self.force_reset,
+            "access": int_access
+        }
+        return d_user
 
 
 def build_auth_token(ttl, key, uuid, iss, aud):
