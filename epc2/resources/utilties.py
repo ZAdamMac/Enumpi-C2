@@ -202,7 +202,8 @@ def json_validate(test_json, dict_schema):
 def token_validate(cookie, ttl, db_conn, new_key, iss, aud, t_type):
     """Sort of a malnamed function. Both validates the argued token and
     returns a tuple depending on the results. If the token is invalid it
-    returns the tuple (False, None), else it will return (True, new token).
+    returns the tuple (False, None), else it will return (users.user_id, new
+    token).
 
     :param cookie: A cookie provided by the calling endpoint.
     :param ttl: The relevant time to live value. The bearer token will be
@@ -262,6 +263,6 @@ def token_validate(cookie, ttl, db_conn, new_key, iss, aud, t_type):
             cmd = "UPDATE users SET bearer_token_key=%s, bearer_token_expiry=FROM_UNIXTIME(%s) WHERE client_id=%s"
         curr.execute(cmd, (new_key, new_expiry, uid))
         db_conn.commit()
-        return True, new_token
+        return uid, new_token
     else:
         return False, None
