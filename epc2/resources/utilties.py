@@ -48,7 +48,7 @@ class UserModel(object):
         self.fname = d_json["firstName"]
         self.lname = d_json["lastName"]
         self.new_password = d_json["newPwd"]
-        self.force_reset = d_json["forceResetPwd"]
+        self.force_reset = bool(d_json["forceResetPwd"])
         permissions = d_json["permissions"]
         self.can_login = permissions["active"]
         self.can_report = permissions["useReportingApi"]
@@ -87,14 +87,15 @@ class UserModel(object):
             "username": self.name,
             "firstName": self.fname,
             "lastName": self.lname,
-            "forceResetPwd": self.force_reset,
+            "forceResetPwd": bool(self.force_reset),
             "permissions": {
                 "active": self.can_login,
                 "useReportingApi": self.can_report,
                 "canIssueCommands": self.can_command,
                 "canModifyClients": self.can_grant,
                 "isUserAdmin": self.can_users
-            }
+            },
+            "lastActive": self.last_active
         }
         if serialize:
             out = json.dumps(d_json)
@@ -223,7 +224,7 @@ def token_validate(cookie, ttl, db_conn, new_key, iss, aud, t_type):
     # First, dismantle the cookie and reconstruct our primitives
     header, body, sig = cookie.split(".")
     dict_header = base64.b64decode(header.encode('utf-8'))
-    dict_body = base64.b64decode(header.encode('utf-8'))
+    dict_body = base64.b64decode(body.encode('utf-8'))
     obj_header = json.loads(dict_header)
     obj_body = json.loads(dict_body)
     msg = header + "." + body
