@@ -82,7 +82,7 @@ class UserModel(object):
         padding = ''
         if missing > 0:
             for i in range(missing):
-               padding += '0'
+                padding += '0'
         s_permissions = padding+s_permissions
 
         self.can_login = bool(int(s_permissions[0]))
@@ -238,9 +238,8 @@ def token_validate(cookie, ttl, db_conn, new_key, iss, aud, t_type):
     """
     # First, dismantle the cookie and reconstruct our primitives
     header, body, sig = cookie.split(".")
-    dict_header = base64.b64decode(header.encode('utf-8'))
+    del header
     dict_body = base64.b64decode(body.encode('utf-8'))
-    obj_header = json.loads(dict_header)
     obj_body = json.loads(dict_body)
     msg = header + "." + body
 

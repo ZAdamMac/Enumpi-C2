@@ -11,19 +11,24 @@ Full license and documentation to be found at:
 https://github.com/ZAdamMac/Enumpi-C2
 """
 
-import bcrypt
-from datetime import datetime
 from flask_restful import Resource
-from flask import current_app, request, make_response, redirect, render_template
-import json
+from flask import current_app, request, make_response
 from os import urandom
 import pymysql
 import uuid
-from .utilties import build_auth_token, json_validate, token_validate, UserModel
+from .utilties import json_validate, token_validate, UserModel
+
+__version__ = "prototype"
 
 
 class ManageUser(Resource):
     def get(self):
+        """An authenticated user with reporting permissions may retrieve a
+        full listing of all users active and inactive on the server.
+
+        :return: In the valid case, a json dictionary of (row, user) pairs
+        """
+        # FUTURE add query scoping.
         cookie = request.cookies["auth"]
         ttl = int(current_app.config["USER_TTL"])*60
         iss = current_app.config["NETWORK_LABEL"]
@@ -78,6 +83,26 @@ class ManageUser(Resource):
             return {'message': 'unauthorized'}, 403
 
     def post(self):
+        """The post method allows the creation of a new user using the
+        following model json object. All fields required.
+
+        {
+        "username": "string",
+        "firstName": "string",
+        "lastName": "string",
+        "email": "string",
+        "newPwd": "string, max 72 characters (bcrypt limitation)",
+        "forceResetPwd": Boolean,
+        "permissions": {"active": Boolean,
+                        "useReportingApi": Boolean,
+                        "canIssueCommands": Boolean,
+                        "canModifyClients": Boolean,
+                        "isUserAdmin": Boolean
+                        }
+      }
+
+        :return:
+        """
         # Add a new user, if authenticated.
         cookie = request.cookies["auth"]
         ttl = int(current_app.config["USER_TTL"]) * 60
@@ -110,8 +135,8 @@ class ManageUser(Resource):
             if requestor.can_users and requestor.can_login:
                 # Let's validate the request body
                 dict_schema = {
-                               "username": "",
-                               "firstName": "",
+                                "username": "",
+                                "firstName": "",
                                 "lastName": "",
                                 "email": "",
                                 "newPwd": "",
@@ -129,7 +154,7 @@ class ManageUser(Resource):
                     cur = connection.cursor()
                     cur.execute("SELECT username FROM users WHERE username=%s", d_json["username"])
                     result = cur.fetchall()
-                    if len(result) >0:
+                    if len(result) > 0:
                         is_unique_user = False
                     else:
                         is_unique_user = True
@@ -172,6 +197,27 @@ class ManageUser(Resource):
             return {'message': 'unauthorized'}, 403
 
     def patch(self):
+        """The post method allows the modification of an existing user, using
+         a provided JSON data set. Only userId is required.
+
+            {
+                "userId": "string"
+                "username": "string",
+                "firstName": "string",
+                "lastName": "string",
+                "email": "string",
+                "newPwd": "string, max 72 characters (bcrypt limitation)",
+                "forceResetPwd": Boolean,
+                "permissions": {"active": Boolean,
+                                "useReportingApi": Boolean,
+                                "canIssueCommands": Boolean,
+                                "canModifyClients": Boolean,
+                                "isUserAdmin": Boolean
+                                }
+              }
+
+                :return:
+                """
         # edit an existing user, if authenticated.
         cookie = request.cookies["auth"]
         ttl = int(current_app.config["USER_TTL"]) * 60
@@ -281,6 +327,11 @@ class ManageUser(Resource):
             return {'message': 'unauthorized'}, 403
 
     def delete(self):
+        """accepts a json object containing either user_id or useername, and
+        sets that user's can_login bit to 0.
+
+        :return:
+        """
         # deactivate (set permissions 0) a user if authenticated.
         cookie = request.cookies["auth"]
         ttl = int(current_app.config["USER_TTL"]) * 60
