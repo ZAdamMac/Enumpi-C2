@@ -75,6 +75,16 @@ class UserModel(object):
         self.force_reset = d_user["pw_reset"]
         self.last_active = d_user["bearer_token_expiry"]
         s_permissions = bin(d_user["access"]).lstrip('0b')
+
+        # Have to enforce a string length or bugs happen!
+        bits = len(s_permissions)
+        missing = 5-bits  # FUTURE: If adding bits to access, change this int!
+        padding = ''
+        if missing > 0:
+            for i in range(missing):
+               padding += '0'
+        s_permissions = padding+s_permissions
+
         self.can_login = bool(int(s_permissions[0]))
         self.can_report = bool(int(s_permissions[1]))
         self.can_command = bool(int(s_permissions[2]))

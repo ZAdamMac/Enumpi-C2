@@ -52,7 +52,7 @@ class ManageUser(Resource):
             requestor.from_dict(d_user)
 
             # And of course, if they're allowed to do that.
-            if requestor.can_report:
+            if requestor.can_report and requestor.can_login:
                 array_response = {}
                 cmd = "SELECT * FROM users"
                 cur.execute(cmd)
@@ -107,7 +107,7 @@ class ManageUser(Resource):
             requestor.from_dict(d_user)
 
             # And of course, if they're allowed to do that.
-            if requestor.can_users:
+            if requestor.can_users and requestor.can_login:
                 # Let's validate the request body
                 dict_schema = {
                                "username": "",
@@ -201,7 +201,7 @@ class ManageUser(Resource):
             requestor.from_dict(d_user)
 
             # And of course, if they're allowed to do that.
-            if requestor.can_users:
+            if requestor.can_users and requestor.can_login:
                 # We can't just validate the damn thing because patch.
                 # The only required field is UUID. We need to validate that exists.
                 # After that, we need a way to programmatically add keys.
@@ -263,6 +263,7 @@ class ManageUser(Resource):
                     cur.execute(cmd, d_user)
                     connection.commit()
                     connection.close()
+                    d_user.pop("passwd", None)
                     resp = make_response({'updated user': d_user})
                     resp.set_cookie("auth", new_token)
                     resp.status_code = 200
@@ -281,4 +282,82 @@ class ManageUser(Resource):
 
     def delete(self):
         # deactivate (set permissions 0) a user if authenticated.
-        pass
+        cookie = request.cookies["auth"]
+        ttl = int(current_app.config["USER_TTL"]) * 60
+        iss = current_app.config["NETWORK_LABEL"]
+        try:
+            connection = pymysql.connect(host=current_app.config["DBHOST"],
+                                         user=current_app.config["USERNAME"],
+                                         password=current_app.config["PASSPHRASE"],
+                                         db='enumpi',
+                                         charset='utf8mb4',
+                                         cursorclass=pymysql.cursors.DictCursor)
+            connection.ping(reconnect=True)
+        except KeyError:
+            return {'message': 'Internal Server Error'}, 500
+        except pymysql.Error:
+            return {'message': 'Internal Server Error'}, 500
+        token_user, new_token = token_validate(cookie, ttl, connection,
+                                               urandom(64), iss, "user",
+                                               "bearer")
+        if token_user:
+            # First we need to know who's asking.
+            cur = connection.cursor()
+            requestor = UserModel()
+            cmd = "SELECT * FROM users WHERE user_id=%s"
+            cur.execute(cmd, token_user)
+            d_user = cur.fetchone()
+            requestor.from_dict(d_user)
+
+            # And of course, if they're allowed to do that.
+            if requestor.can_users and requestor.can_login:
+                # We can't just validate the damn thing because patch.
+                # The only required field is UUID. We need to validate that exists.
+                # After that, we need a way to programmatically add keys.
+                d_json = request.get_json()
+                if d_json:
+                    if "userId" in d_json.keys():
+                        cmd = "SELECT * FROM users WHERE user_id=%s"
+                        key = d_json["userId"]
+                        cur.execute(cmd, key)
+                    elif "username" in d_json.keys():
+                        cmd = "SELECT * FROM users WHERE username=%s"
+                        key = d_json["username"]
+                    else:  # Makes the linter happy. :/
+                        cmd = False
+                        key = False
+                    if cmd and key:
+                        cur.execute(cmd, key)
+                        d_user = cur.fetchone()
+                        subject_user = UserModel()
+                        if d_user:
+                            subject_user.from_dict(d_user)
+                            # Finally, deactivate!
+                            subject_user.can_login = False
+                    else:
+                        subject_user = False
+                else:
+                    subject_user = False
+
+                if subject_user:  # This will only be set if a user was found.
+                    # Let's add this user to the DB!
+                    d_user = subject_user.dump_dict()
+                    cmd = "UPDATE users SET access=%s WHERE user_id=%s"
+                    cur.execute(cmd, (d_user["access"], d_user["user_id"]))
+                    connection.commit()
+                    connection.close()
+                    resp = make_response({'deactivated user': d_user})
+                    resp.set_cookie("auth", new_token)
+                    resp.status_code = 200
+                    resp.content_type = "application/json"
+                else:
+                    resp = make_response({'message': "user doesn't exist. Try POSTing it!"})
+                    resp.status_code = 400
+                    resp.set_cookie("auth", new_token)
+            else:
+                resp = make_response({'message': 'Insufficient Permissions'})
+                resp.status_code = 403
+                resp.set_cookie("auth", new_token)
+            return resp
+        else:
+            return {'message': 'unauthorized'}, 403
