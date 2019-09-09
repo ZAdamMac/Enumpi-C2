@@ -12,6 +12,7 @@ https://github.com/ZAdamMac/Enumpi-C2
 
 from flask import Blueprint
 from flask_restful import Api
+from resources.actionmanage import ManageAction
 from resources.userauth import AuthenticateUser
 from resources.usermanage import ManageUser
 
@@ -24,3 +25,4 @@ api = Api(api_bp)
 # New Routes below this line
 api.add_resource(AuthenticateUser, '/user/auth')
 api.add_resource(ManageUser, '/user/manage')
+api.add_resource(ManageAction, "/action/manage")

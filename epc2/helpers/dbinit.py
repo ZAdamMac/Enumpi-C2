@@ -23,7 +23,7 @@ __version__ = "0.0.1dev1"
 
 spec_tables = [
     """CREATE TABLE `actions` (
-      `action_id` INT NOT NULL AUTO_INCREMENT,
+      `action_id` CHAR(36) NOT NULL,
       `action` VARCHAR(255) NOT NULL,
       `description` TEXT DEFAULT NULL,
       `dummy_command` LONGTEXT DEFAULT NULL,
