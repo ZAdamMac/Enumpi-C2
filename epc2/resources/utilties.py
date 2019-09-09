@@ -271,7 +271,6 @@ def token_validate(cookie, ttl, db_conn, new_key, iss, aud, t_type):
     """
     # First, dismantle the cookie and reconstruct our primitives
     header, body, sig = cookie.split(".")
-    del header
     dict_body = base64.b64decode(body.encode('utf-8'))
     obj_body = json.loads(dict_body)
     msg = header + "." + body
