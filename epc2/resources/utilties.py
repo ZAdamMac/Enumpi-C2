@@ -146,6 +146,39 @@ class UserModel(object):
         return d_user
 
 
+def authenticated_exec(token_id, permission, connection, func, body):
+    """
+    Accepts the noted arguments to determine if a given user may take an action
+    and then allows them to execute it.
+
+    For this to work the function in question should accept the json body and
+    the database connection as its only arguments and in that order.
+
+    :param token_id: the value returned by token_validate[0].
+    :param permission: A string matching the permission attribute to check
+    :param connection: a database connection object.
+    :param func: the function to be executed if the client is permitted
+    :param body: the json body of the request.
+    :return: the response body to be sent to the remote user.
+    """
+    cur = connection.cursor()
+    requestor = UserModel()
+    cmd = "SELECT * FROM users WHERE user_id=%s"
+    cur.execute(cmd, token_id)
+    d_user = cur.fetchone()
+    requestor.from_dict(d_user)
+
+    if requestor.can_login and requestor.__getattribute__(permission):
+        response = func(body, connection)
+        connection.commit()
+        connection.close()
+    else:
+        response = {'error': 400, 'msg': "Unauthorized"}
+        connection.close()
+
+    return response
+
+
 def build_auth_token(ttl, key, uuid, iss, aud):
     """Minimal tool for quickly generating a JWT and returning it along with
     the associated expiry timestamp. Built as a utility function so that it
