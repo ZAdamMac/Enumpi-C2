@@ -275,7 +275,7 @@ def user_management_post(body, connection):
                                VALUES (%(user_id)s, %(username)s, %(fname)s, %(lname)s,
                                %(email)s, %(passwd)s, %(pw_reset)s, %(access)s)"""
         cur.execute(cmd, d_user)
-        response ={'created user': d_user["username"], "error": 200}
+        response = {'created user': d_user["username"], "error": 200}
     elif is_unique_user:
         response = {'message': "errors in request body", "error": 400}.update({"errors": errors})
     else:

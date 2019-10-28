@@ -16,6 +16,7 @@ from resources.actionmanage import ManageAction
 from resources.clientmanage import ManageClient
 from resources.userauth import AuthenticateUser
 from resources.usermanage import ManageUser
+from resources.clientauth import AuthenticateClient
 
 __version__ = "prototype"
 
@@ -28,3 +29,4 @@ api.add_resource(AuthenticateUser, '/user/auth')
 api.add_resource(ManageUser, '/user/manage')
 api.add_resource(ManageAction, "/action/manage")
 api.add_resource(ManageClient, "/client/manage")
+api.add_resource(AuthenticateClient, "/client/auth")
