@@ -216,7 +216,7 @@ def client_management_get(body, connection):
     counter = -1
     for client in clients:
         counter += 1
-        response.update({counter: client})
+        response.update({str(counter): client})
     response.update({"error": 200})
 
     return response

@@ -54,7 +54,7 @@ spec_tables = [
       `user_id` CHAR(36) DEFAULT NULL,
       `command` VARCHAR(255) DEFAULT NULL,
       `json_cmd` LONGTEXT DEFAULT NULL,
-      `interval` VARCHAR(255) DEFAULT NULL,
+      `period` VARCHAR(255) DEFAULT NULL,
       `time_next` TIMESTAMP,
       `time_logged` TIMESTAMP,
       `time_sent` TIMESTAMP,
