@@ -143,7 +143,7 @@ class AuthenticateClient(Resource):
         except pymysql.Error:
             return {'message': 'Internal Server Error'}, 500
 
-        client_id, new_token = token_validate(cookie, ttl, connection, urandom(64), iss, "user", "refresh")
+        client_id, new_token = token_validate(cookie, ttl, connection, urandom(64), iss, "client", "refresh")
         if client_id:
             resp = make_response({"message": "Ok"})
             resp.set_cookie("auth", new_token)

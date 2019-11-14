@@ -227,7 +227,8 @@ def command_management_delete(body, connection):
                   "VALUES (%(msg_id)s, %(body)s, FROM_UNIXTIME(%(now)s))"
             cur.execute(cmd, d_args)
             cmd = "UPDATE commands " \
-                  "SET time_acknowledged=FROM_UNIXTIME(%(now)s), time_next=time_next " \
+                  "SET time_acknowledged=FROM_UNIXTIME(%(now)s), time_next=time_next, msg_id=%(msg_id)s, " \
+                  "time_logged=FROM_UNIXTIME(%(now)s) " \
                   "WHERE command_id=%(command_id)s"
             cur.execute(cmd, d_args)
             response = {"error": 200}
