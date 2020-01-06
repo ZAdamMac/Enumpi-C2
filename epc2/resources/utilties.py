@@ -281,7 +281,7 @@ def token_validate(cookie, ttl, db_conn, new_key, iss, aud, t_type):
     if aud == "user":
         cmd = "SELECT * FROM users WHERE user_id=%s"
     else:
-        cmd = "SELECT * FROM clients WHERE client_id=%s"
+        cmd = "SELECT * FROM client_grants WHERE client_id=%s"
     uid = obj_body["sub"]
     length = curr.execute(cmd, uid)
     if length == 0:
@@ -311,7 +311,7 @@ def token_validate(cookie, ttl, db_conn, new_key, iss, aud, t_type):
         if aud == "user":
             cmd = "UPDATE users SET bearer_token_key=%s, bearer_token_expiry=FROM_UNIXTIME(%s) WHERE user_id=%s"
         elif aud == "client":
-            cmd = "UPDATE users SET bearer_token_key=%s, bearer_token_expiry=FROM_UNIXTIME(%s) WHERE client_id=%s"
+            cmd = "UPDATE client_grants SET bearer_token_key=%s, bearer_token_expiry=FROM_UNIXTIME(%s) WHERE client_id=%s"
         curr.execute(cmd, (new_key, new_expiry, uid))
         db_conn.commit()
         return uid, new_token

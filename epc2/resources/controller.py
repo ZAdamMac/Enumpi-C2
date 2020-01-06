@@ -23,7 +23,7 @@ from .utilties import authenticated_exec, json_validate, token_validate
 __version__ = "prototype"
 
 
-class ManageCommand(Resource):
+class Controller(Resource):
     def get(self):
         """Performs validation of the incoming client authorization token, then
         uses the client_id value extracted from that token as the principal
@@ -121,7 +121,7 @@ class ManageCommand(Resource):
             return {'message': 'Internal Server Error'}, 500
         token_client, new_token = token_validate(cookie, ttl, connection, urandom(64), iss, "client", "bearer")
         if token_client:
-            dict_return = control_patch(request.get(json), connection)
+            dict_return = control_patch(request.get_json(), connection)
             resp = make_response(dict_return)
             resp.set_cookie("auth", new_token)
             resp.status_code = dict_return["error"]
@@ -154,7 +154,7 @@ class ManageCommand(Resource):
             return {'message': 'Internal Server Error'}, 500
         token_client, new_token = token_validate(cookie, ttl, connection, urandom(64), iss, "client", "bearer")
         if token_client:
-            dict_return = control_delete(token_client)
+            dict_return = control_delete(request.get_json(), connection)
             resp = make_response(dict_return)
             resp.set_cookie("auth", new_token)
             resp.status_code = dict_return["error"]
@@ -177,7 +177,7 @@ def control_get(client_id, conn):
     :return:
     """
     cur = conn.cursor()
-    cmd = "SELECT command_id as commandId, command, json_command as args, time_next as runAt " \
+    cmd = "SELECT command_id as commandId, command, json_cmd as args, time_next as runAt " \
           "FROM commands " \
           "WHERE client_id=%s " \
           "AND time_acknowledged NOT LIKE FROM_UNIXTIME(0)"
@@ -193,6 +193,8 @@ def control_get(client_id, conn):
             counter += 1
             dict_all_commands.update({str(counter): each})
         dict_all_commands.update({"error": 200})
+
+    return dict_all_commands
 
 
 def control_post(body, connection):
@@ -224,7 +226,7 @@ def control_post(body, connection):
         cur.execute(cmd, body)
         cmd = "UPDATE commands " \
               "SET time_acknowledged=time_acknowledged, time_next=time_next, msg_id=%(msg_id)s, time_logged=%(now)s " \
-              "WHERE command_id=%(command_id)s"
+              "WHERE command_id=%(commandId)s"
         cur.execute(cmd, body)
         connection.commit()
         response = {"error":200}
@@ -262,7 +264,7 @@ def control_patch(body, connection):
 
 
 def control_delete(body, connection):
-    """Expects a json object with one attribute, "clientIds", which should be
+    """Expects a json object with one attribute, "commandIds", which should be
     a list/array of client_id values to acknowledge. This can be used to
     immediately acknowledge long-running commands.
 
@@ -270,12 +272,12 @@ def control_delete(body, connection):
     :param connection:
     :return:
     """
-    dict_schema = {"clientIds": []}
+    dict_schema = {"commandIds": []}
     proceed, errors = json_validate(body, dict_schema)
     cur = connection.cursor()
 
     if proceed:
-        for command_id in body["clientIds"]:
+        for command_id in body["commandIds"]:
             now = datetime.datetime.now().timestamp()
             cmd = "UPDATE commands " \
                   "SET time_acknowledged=FROM_UNIXTIME(%s), time_next=time_next " \
