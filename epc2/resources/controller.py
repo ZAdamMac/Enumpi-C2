@@ -180,7 +180,7 @@ def control_get(client_id, conn):
     cmd = "SELECT command_id as commandId, command, json_cmd as args, time_next as runAt " \
           "FROM commands " \
           "WHERE client_id=%s " \
-          "AND time_acknowledged NOT LIKE FROM_UNIXTIME(0)"
+          "AND time_acknowledged LIKE '0000-00-00 00:00:00'"
     cur.execute(cmd, client_id)  # This yields all non-acknowledged commands
     array_all_commands = cur.fetchall()
 
@@ -193,6 +193,11 @@ def control_get(client_id, conn):
             counter += 1
             dict_all_commands.update({str(counter): each})
         dict_all_commands.update({"error": 200})
+
+    for command in array_all_commands:  # We also need to set this.
+        cmd = "UPDATE commands SET time_sent=FROM_UNIXTIME(%s), time_next=time_next WHERE command_id=%s"
+        cur.execute(cmd, (datetime.datetime.now().timestamp(), command["commandId"]))
+    conn.commit()
 
     return dict_all_commands
 
