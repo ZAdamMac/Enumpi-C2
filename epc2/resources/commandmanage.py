@@ -189,10 +189,12 @@ def command_management_post(body, connection):
         json_cmd = json.dumps(body["arguments"])
         d_action.update({"json_cmd": json_cmd})
         d_action.update({"time_next": datetime.datetime.strptime(body["firstRun"], "%Y-%m-%dT%H:%M:%SZ").timestamp()})
+        d_action.update({"now": datetime.datetime.now().timestamp()})
         d_action.update(body)
-        cmd = "INSERT INTO commands (command_id, client_id, user_id, command, json_cmd, period, time_next) " \
+        cmd = "INSERT INTO commands " \
+              "(command_id, client_id, user_id, command, json_cmd, period, time_next, time_logged) " \
               "VALUES (%(command_id)s, %(clientId)s, %(userId)s, %(command)s, " \
-              "%(json_cmd)s, %(interval)s, FROM_UNIXTIME(%(time_next)s))"
+              "%(json_cmd)s, %(interval)s, FROM_UNIXTIME(%(time_next)s), FROM_UNIXTIME(%(now)s))"
         cur.execute(cmd, d_action)
         response = {"error": 200}
     else:
